@@ -22,6 +22,7 @@ import numpy as np
 class Dataset:
     def __init__(self, source_dataset, batch_size, epochs, window_size, device):
         self.data_frame = self.read_dataset(source_dataset)
+        # self.data_frame = self.data_frame.iloc[0:80, :]
         self.batch_size = batch_size
         self.epochs = epochs
         self.device = device
@@ -32,10 +33,12 @@ class Dataset:
         self.model = Encoder(
             n_position=200,
             d_word_vec=self.columns, d_model=self.columns, d_inner=64,
-            n_layers=2, n_head=4, d_k=32, d_v=32,
+            n_layers=2, n_head=2, d_k=8, d_v=8,
             dropout=0.1)
         self.criterion = torch.nn.MSELoss(reduction='sum')
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-4)
+        self.optimizer = ScheduledOptim(
+            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-05),
+            2.0, self.columns, 4000)
         self.train()
 
     def read_dataset(self, source_dataset):
@@ -106,12 +109,15 @@ class AirQualityDataset(Dataset):
             imputing_df = self.train_df
             imputing_df.loc[[j in chosen_idx for j in range(train_rows)], 'pm2.5'] = 0
             imputing_tensor = torch.tensor(self.train_df.values, dtype=torch.float, device=self.device)
+            avg_loss = 0
 
             for j in range(math.floor(train_rows/section_size)):
                 batch_imputing_tensor = imputing_tensor[j * section_size: (j+1) * section_size, :]
                 batch_train_tensor = train_tensor[j * section_size: (j+1) * section_size, :]
 
                 input_tensor = self.unsqueeze(batch_imputing_tensor)
+
+                self.optimizer.zero_grad()
 
                 imputed_tensor = self.squeeze(self.model(input_tensor, self.input_mask)[0])
 
@@ -122,13 +128,15 @@ class AirQualityDataset(Dataset):
                 true_label_tensor = batch_train_tensor[imputing_idx_tensor, 0]
 
                 loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
-                print(loss)
-                self.optimizer.zero_grad()
                 loss.backward()
-                self.optimizer.step()
+                self.optimizer.step_and_update_lr()
+
+                avg_loss = (j*avg_loss + loss) / (j+1)
+            print(avg_loss)
 
 
-dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 100, 30, torch.device("cpu"))
+
+dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
 
 
 
