@@ -15,8 +15,17 @@ from transformer.Models import Transformer
 from transformer.Models import Encoder
 from transformer.Optim import ScheduledOptim
 
+from sklearn import preprocessing
+
 import pandas as pd
 import numpy as np
+
+
+def normalize_df(df):
+    x = df.values
+    min_max_scalar = preprocessing.MinMaxScaler()
+    x_scaled = min_max_scalar.fit_transform(x)
+    return pd.DataFrame(x_scaled)
 
 
 class Dataset:
@@ -28,6 +37,8 @@ class Dataset:
         self.device = device
         self.window = window_size
         self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int)
+        self.target_max = 0
+        self.target_min = 0
         self.train_df, self.valid_df, self.test_df = self.organize_dataset()
         self.columns = self.train_df.shape[1]
         self.model = Encoder(
@@ -35,9 +46,9 @@ class Dataset:
             d_word_vec=self.columns, d_model=self.columns, d_inner=64,
             n_layers=2, n_head=2, d_k=8, d_v=8,
             dropout=0.1)
-        self.criterion = torch.nn.MSELoss(reduction='sum')
+        self.criterion = torch.nn.MSELoss()
         self.optimizer = ScheduledOptim(
-            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-05),
+            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
             2.0, self.columns, 4000)
         self.train()
 
@@ -91,12 +102,22 @@ class AirQualityDataset(Dataset):
         test_df = self.data_frame.loc[np.isnan(self.data_frame['pm2.5'])]
 
         clean_df = self.data_frame.loc[~np.isnan(self.data_frame['pm2.5'])]
+
+        self.target_max = clean_df['pm2.5'].max()
+        self.target_min = clean_df['pm2.5'].min()
+
+        clean_df['pm2.5'] = (clean_df['pm2.5'] - self.target_min) / (self.target_max - self.target_min)
+
         valid_df = clean_df.loc[clean_df['month'].isin([4, 8, 12])]
         train_df = clean_df.loc[~clean_df['month'].isin([4, 8, 12])]
 
         test_df = test_df.drop('month', axis=1)
         train_df = train_df.drop('month', axis=1)
         valid_df = valid_df.drop('month', axis=1)
+
+        test_df = normalize_df(test_df)
+        train_df = normalize_df(train_df)
+        valid_df = normalize_df(valid_df)
 
         return train_df, valid_df, test_df
 
@@ -106,9 +127,9 @@ class AirQualityDataset(Dataset):
         section_size = self.window * self.batch_size
         for i in range(self.epochs):
             chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
-            imputing_df = self.train_df
-            imputing_df.loc[[j in chosen_idx for j in range(train_rows)], 'pm2.5'] = 0
-            imputing_tensor = torch.tensor(self.train_df.values, dtype=torch.float, device=self.device)
+            imputing_df = self.train_df.copy()
+            imputing_df.loc[[j in chosen_idx for j in range(train_rows)], 0] = 0
+            imputing_tensor = torch.tensor(imputing_df.values, dtype=torch.float, device=self.device)
             avg_loss = 0
 
             for j in range(math.floor(train_rows/section_size)):
@@ -132,11 +153,12 @@ class AirQualityDataset(Dataset):
                 self.optimizer.step_and_update_lr()
 
                 avg_loss = (j*avg_loss + loss) / (j+1)
-            print(avg_loss)
-
+            print(avg_loss*(self.target_max - self.target_min))
 
 
 dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
+
+
 
 
 
