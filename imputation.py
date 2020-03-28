@@ -20,12 +20,10 @@ from sklearn import preprocessing
 import pandas as pd
 import numpy as np
 
-print('0')
 
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-print('0.5')
 
 def normalize_df(df):
     x = df.values
@@ -36,9 +34,7 @@ def normalize_df(df):
 
 class Dataset:
     def __init__(self, source_dataset, batch_size, epochs, window_size, device):
-        print('1')
         self.data_frame = self.read_dataset(source_dataset)
-        print('2')
         # self.data_frame = self.data_frame.iloc[0:80, :]
         self.batch_size = batch_size
         self.epochs = epochs
@@ -47,21 +43,17 @@ class Dataset:
         self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int)
         self.target_max = 0
         self.target_min = 0
-        print('3')
         self.train_df, self.valid_df, self.test_df = self.organize_dataset()
         self.columns = self.train_df.shape[1]
-        print('4')
         self.model = Encoder(
             n_position=200,
             d_word_vec=self.columns, d_model=self.columns, d_inner=64,
             n_layers=2, n_head=2, d_k=8, d_v=8,
             dropout=0.1)
         self.criterion = torch.nn.MSELoss()
-        print('5')
         self.optimizer = ScheduledOptim(
             optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
             2.0, self.columns, 4000)
-        print('6')
         self.train()
 
     def read_dataset(self, source_dataset):
@@ -134,11 +126,9 @@ class AirQualityDataset(Dataset):
         return train_df, valid_df, test_df
 
     def train(self):
-        print('7')
         train_tensor = torch.tensor(self.train_df.values, dtype=torch.float, device=self.device)
         train_rows = self.train_df.shape[0]
         section_size = self.window * self.batch_size
-        print('8')
         for i in range(self.epochs):
             chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
             imputing_df = self.train_df.copy()
@@ -153,19 +143,24 @@ class AirQualityDataset(Dataset):
 
                 input_tensor = self.unsqueeze(batch_imputing_tensor)
 
+                print('10')
                 self.optimizer.zero_grad()
 
                 imputed_tensor = self.squeeze(self.model(input_tensor, self.input_mask)[0])
+                print('11')
 
                 imputing_idx = [k in chosen_idx for k in range(j * section_size, (j+1) * section_size)]
                 imputing_idx_tensor = torch.tensor(imputing_idx)
 
                 imputed_label_tensor = imputed_tensor[imputing_idx_tensor, 0]
                 true_label_tensor = batch_train_tensor[imputing_idx_tensor, 0]
-
+                print('12')
                 loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
+                print('13')
                 loss.backward()
+                print('14')
                 self.optimizer.step_and_update_lr()
+                print('15')
 
                 avg_loss = (j*avg_loss + loss) / (j+1)
             print(avg_loss*(self.target_max - self.target_min))
@@ -173,9 +168,7 @@ class AirQualityDataset(Dataset):
 
 dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
 
-# print('0.6')
-# device = xm.xla_device()
-# print('0.7')
+# device = xm.xla_device()  //here
 # dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
 
 
