@@ -20,7 +20,7 @@ from sklearn import preprocessing
 import pandas as pd
 import numpy as np
 
-import torch_xla_py.xla_model as xm
+import torch_xla.xla_model as xm
 
 def normalize_df(df):
     x = df.values
