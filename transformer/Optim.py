@@ -1,6 +1,7 @@
 '''A wrapper class for scheduled optimizer '''
 import numpy as np
-import torch_xla.xla_model as xm
+import torch_xla
+import torch_xla.core.xla_model as xm
 
 class ScheduledOptim():
     '''A simple wrapper class for learning rate scheduling'''
