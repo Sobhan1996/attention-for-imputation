@@ -136,40 +136,34 @@ class AirQualityDataset(Dataset):
             imputing_tensor = torch.tensor(imputing_df.values, dtype=torch.float, device=self.device)
             avg_loss = 0
 
-            print('9')
             for j in range(math.floor(train_rows/section_size)):
                 batch_imputing_tensor = imputing_tensor[j * section_size: (j+1) * section_size, :]
                 batch_train_tensor = train_tensor[j * section_size: (j+1) * section_size, :]
 
                 input_tensor = self.unsqueeze(batch_imputing_tensor)
 
-                print('10')
                 self.optimizer.zero_grad()
 
                 imputed_tensor = self.squeeze(self.model(input_tensor, self.input_mask)[0])
-                print('11')
 
                 imputing_idx = [k in chosen_idx for k in range(j * section_size, (j+1) * section_size)]
                 imputing_idx_tensor = torch.tensor(imputing_idx)
 
                 imputed_label_tensor = imputed_tensor[imputing_idx_tensor, 0]
                 true_label_tensor = batch_train_tensor[imputing_idx_tensor, 0]
-                print('12')
+
                 loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
-                print('13')
-                loss.backward()
-                print('14')
+                loss.backward()     #here compute engine
                 self.optimizer.step_and_update_lr()
-                print('15')
 
                 avg_loss = (j*avg_loss + loss) / (j+1)
             print(avg_loss*(self.target_max - self.target_min))
 
 
-dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
+# dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
 
-# device = xm.xla_device()  //here
-# dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
+device = xm.xla_device()  #here tpu
+dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
 
 
 
