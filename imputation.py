@@ -171,12 +171,12 @@ class AirQualityDataset(Dataset):
             print(avg_loss*(self.target_max - self.target_min))
 
 
-# dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
+dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
 
-print('0.6')
-device = xm.xla_device()
-print('0.7')
-dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
+# print('0.6')
+# device = xm.xla_device()
+# print('0.7')
+# dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
 
 
 
