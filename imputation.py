@@ -20,8 +20,12 @@ from sklearn import preprocessing
 import pandas as pd
 import numpy as np
 
+print('0')
+
 import torch_xla
 import torch_xla.core.xla_model as xm
+
+print('0.5')
 
 def normalize_df(df):
     x = df.values
