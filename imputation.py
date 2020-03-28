@@ -20,6 +20,7 @@ from sklearn import preprocessing
 import pandas as pd
 import numpy as np
 
+import torch_xla_py.xla_model as xm
 
 def normalize_df(df):
     x = df.values
@@ -156,10 +157,11 @@ class AirQualityDataset(Dataset):
             print(avg_loss*(self.target_max - self.target_min))
 
 
-dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
+# dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
 
 
-
+device = xm.xla_device()
+dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
 
 
 
