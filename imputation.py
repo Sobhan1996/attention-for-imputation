@@ -87,9 +87,9 @@ class Dataset:
 
     def draw_plots(self):
         plt.plot(self.loss_list, 'r', label="Loss")
-        plt.plot(self.lr_list, 'b', label="100 * Learning Rate")
-        plt.show()
-        plt.savefig(self.plot_file)
+        plt.plot(self.lr_list, 'b', label="10000 * Learning Rate")
+        plt.legend(loc="upper right")
+        plt.savefig(self.plot_file, quality=90)
 
 
 class AirQualityDataset(Dataset):
@@ -176,7 +176,7 @@ class AirQualityDataset(Dataset):
 
 
 dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, epochs=2,
-                            window_size=30, device=torch.device("cpu"), plot_file='output_plot.png')
+                            window_size=30, device=torch.device("cpu"), plot_file='AirQuality_plot.jpg')
 
 # device = xm.xla_device()  #here tpu
 # dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
