@@ -35,7 +35,8 @@ def normalize_df(df):
 
 
 class Dataset:
-    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, save_model_file=None):
+    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
+                 test_data, valid_data, save_model_file=None, load_data=False):
         self.data_frame = self.read_dataset(source_dataset)
         self.batch_size = batch_size
         self.epochs = epochs
@@ -46,7 +47,12 @@ class Dataset:
         self.target_max = 0
         self.target_min = 0
         self.save_model_file = save_model_file
-        self.train_df, self.valid_df, self.test_df = self.organize_dataset()
+        if load_data:
+            self.train_df = pd.read_csv(train_data)
+            self.test_df = pd.read_csv(test_data)
+            self.valid_df = pd.read_csv(valid_data)
+        else:
+            self.train_df, self.valid_df, self.test_df = self.organize_dataset()
         self.columns = self.train_df.shape[1]
         self.model = Encoder(
             n_position=200,
@@ -63,7 +69,7 @@ class Dataset:
         self.draw_plots()
 
     def read_dataset(self, source_dataset):
-        pass
+        return pd.read_csv(source_dataset)
 
     def organize_dataset(self):
         train_df = self.data_frame
@@ -100,11 +106,10 @@ class Dataset:
 
 
 class AirQualityDataset(Dataset):
-    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, save_model_file):
-        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, save_model_file)
-
-    def read_dataset(self, source_dataset):
-        return pd.read_csv(source_dataset)
+    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data, test_data,
+                 valid_data, save_model_file, load_data):
+        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
+                         test_data, valid_data, save_model_file, load_data)
 
     def organize_dataset(self):
         self.data_frame['sin_hour'] = np.sin(2*np.pi*self.data_frame.hour/24)
@@ -186,9 +191,11 @@ class AirQualityDataset(Dataset):
             print(avg_loss*(self.target_max - self.target_min))
 
 
-dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, epochs=2,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=30,
                             window_size=30, device=torch.device("cpu"), plot_file='./AirQualityData/AirQuality_plot.jpg',
-                            save_model_file='./AirQualityData/model.chkpt')
+                            save_model_file='./AirQualityData/model.chkpt', train_data='./AirQualityData/train.csv',
+                            test_data='./AirQualityData/test.csv', valid_data='./AirQualityData/valid.csv',
+                            load_data=False)
 
 # device = xm.xla_device()  #here tpu
 # dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
