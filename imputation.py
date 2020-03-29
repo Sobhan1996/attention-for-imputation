@@ -63,7 +63,7 @@ class Dataset:
         self.criterion = torch.nn.L1Loss()
         self.optimizer = ScheduledOptim(
             optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
-            2.0, self.columns, 4000)
+            2.0, self.columns, 2000)
         self.loss_list = []
         self.lr_list = []
         if load_model:
@@ -104,8 +104,8 @@ class Dataset:
                 imputing_idx = [k in chosen_idx for k in range(j * section_size, (j+1) * section_size)]
                 imputing_idx_tensor = torch.tensor(imputing_idx)
 
-                imputed_label_tensor = imputed_tensor[imputing_idx_tensor, 0]
-                true_label_tensor = batch_train_tensor[imputing_idx_tensor, 0]
+                imputed_label_tensor = imputed_tensor[imputing_idx_tensor, self.target_column]
+                true_label_tensor = batch_train_tensor[imputing_idx_tensor, self.target_column]
 
                 # loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
                 loss = self.criterion(imputed_label_tensor, true_label_tensor)
@@ -122,6 +122,51 @@ class Dataset:
             print(avg_loss*(self.target_max - self.target_min))
 
         self.draw_plots()
+
+    def validate(self):
+        valid_tensor = torch.tensor(self.valid_df.values, dtype=torch.float, device=self.device)
+        valid_rows = self.valid_df.shape[0]
+        section_size = self.window * self.batch_size
+
+        chosen_idx = np.random.choice(valid_rows, replace=True, size=math.floor(valid_rows/10))
+        imputing_df = self.valid_df.copy()
+        imputing_df.iloc[[j in chosen_idx for j in range(valid_rows)], self.target_column] = 0
+        imputing_tensor = torch.tensor(imputing_df.values, dtype=torch.float, device=self.device)
+        avg_loss = 0
+
+        imputed_list = []
+        true_list = []
+
+        for j in range(math.floor(valid_rows/section_size)):
+            batch_imputing_tensor = imputing_tensor[j * section_size: (j+1) * section_size, :]
+            batch_valid_tensor = valid_tensor[j * section_size: (j+1) * section_size, :]
+
+            input_tensor = self.unsqueeze(batch_imputing_tensor)
+
+            self.optimizer.zero_grad()
+
+            imputed_tensor = self.squeeze(self.model(input_tensor, self.input_mask)[0])
+
+            imputing_idx = [k in chosen_idx for k in range(j * section_size, (j+1) * section_size)]
+            imputing_idx_tensor = torch.tensor(imputing_idx)
+
+            imputed_label_tensor = imputed_tensor[imputing_idx_tensor, self.target_column]
+            true_label_tensor = batch_valid_tensor[imputing_idx_tensor, self.target_column]
+
+            imputed_list = imputed_list + imputed_tensor[:, self.target_column].tolist()
+            true_list = true_list + batch_valid_tensor[:, self.target_column].tolist()
+
+            # loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
+            loss = self.criterion(imputed_label_tensor, true_label_tensor)
+
+            avg_loss = (j*avg_loss + loss) / (j+1)
+
+        print(avg_loss*(self.target_max - self.target_min))
+
+        plt.plot(imputed_list, 'r', label="Imputed")
+        plt.plot(true_list, 'b', label="True")
+        plt.legend(loc="upper right")
+        plt.show()
 
     def unsqueeze(self, batch_tensor):
         temp_tensor = torch.zeros((self.batch_size, self.window, self.columns), dtype=torch.float, device=self.device)
@@ -196,12 +241,13 @@ class AirQualityDataset(Dataset):
         return train_df, valid_df, test_df
 
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=5,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=100,
                             window_size=30, device=torch.device("cpu"), plot_file='./AirQualityData/AirQuality_plot.jpg',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
-                            load_data=True, load_model=False, target_column=0, target_min=0, target_max=994)
-dataset.train()
+                            load_data=True, load_model=True, target_column=0, target_min=0, target_max=994)
+# dataset.train()
+dataset.validate()
 
 # device = xm.xla_device()  #here tpu
 # dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
