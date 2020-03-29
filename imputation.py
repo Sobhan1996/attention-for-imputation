@@ -135,7 +135,6 @@ class Dataset:
         avg_loss = 0
 
         imputed_list = []
-        true_list = []
 
         for j in range(math.floor(valid_rows/section_size)):
             batch_imputing_tensor = imputing_tensor[j * section_size: (j+1) * section_size, :]
@@ -154,7 +153,6 @@ class Dataset:
             true_label_tensor = batch_valid_tensor[imputing_idx_tensor, self.target_column]
 
             imputed_list = imputed_list + imputed_tensor[:, self.target_column].tolist()
-            true_list = true_list + batch_valid_tensor[:, self.target_column].tolist()
 
             # loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
             loss = self.criterion(imputed_label_tensor, true_label_tensor)
@@ -163,8 +161,11 @@ class Dataset:
 
         print(avg_loss*(self.target_max - self.target_min))
 
+        valid_list = valid_tensor[:, self.target_column].tolist()
+        imputed_list = [(imputed_list[i] * (i in chosen_idx) + valid_list[i] * (i not in chosen_idx)) for i in range(len(imputed_list))]
+
         plt.plot(imputed_list, 'r', label="Imputed")
-        plt.plot(true_list, 'b', label="True")
+        plt.plot(valid_list, 'b', label="True")
         plt.legend(loc="upper right")
         plt.show()
 
