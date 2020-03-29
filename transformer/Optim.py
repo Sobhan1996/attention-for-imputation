@@ -1,7 +1,7 @@
 '''A wrapper class for scheduled optimizer '''
 import numpy as np
-import torch_xla
-import torch_xla.core.xla_model as xm
+# import torch_xla
+# import torch_xla.core.xla_model as xm
 
 class ScheduledOptim():
     '''A simple wrapper class for learning rate scheduling'''
@@ -17,9 +17,9 @@ class ScheduledOptim():
     def step_and_update_lr(self):
         "Step with the inner optimizer"
         self._update_learning_rate()
-        # self._optimizer.step()
-        xm.optimizer_step(self._optimizer)
-        xm.mark_step()
+        self._optimizer.step()
+        # xm.optimizer_step(self._optimizer)
+        # xm.mark_step()
 
 
     def zero_grad(self):

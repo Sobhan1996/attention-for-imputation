@@ -21,8 +21,8 @@ import pandas as pd
 import numpy as np
 
 
-import torch_xla
-import torch_xla.core.xla_model as xm
+# import torch_xla
+# import torch_xla.core.xla_model as xm
 
 
 def normalize_df(df):
@@ -160,35 +160,8 @@ class AirQualityDataset(Dataset):
             print(avg_loss*(self.target_max - self.target_min))
 
 
-# dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
+dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
 
-device = xm.xla_device()  #here tpu
-dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
+# device = xm.xla_device()  #here tpu
+# dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
 
-
-
-
-
-# x = torch.zeros([256, 30, 10], dtype=torch.int32)
-# input_mask = torch.ones([256, 1, 30], dtype=torch.int)
-#
-#
-# model = Encoder(
-#     n_position=200,
-#     d_word_vec=10, d_model=10, d_inner=512,
-#     n_layers=2, n_head=4, d_k=64, d_v=64,
-#     dropout=0.1)
-#
-# y = model(x, input_mask)
-#
-#
-# print(y)
-# print(y[0].size())
-#
-# print('------------------')
-#
-# y = model(x, input_mask)
-#
-#
-# print(y)
-# print(y[0].size())
