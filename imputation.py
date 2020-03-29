@@ -35,7 +35,7 @@ def normalize_df(df):
 
 
 class Dataset:
-    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file):
+    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, save_model_file=None):
         self.data_frame = self.read_dataset(source_dataset)
         self.batch_size = batch_size
         self.epochs = epochs
@@ -45,6 +45,7 @@ class Dataset:
         self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int)
         self.target_max = 0
         self.target_min = 0
+        self.save_model_file = save_model_file
         self.train_df, self.valid_df, self.test_df = self.organize_dataset()
         self.columns = self.train_df.shape[1]
         self.model = Encoder(
@@ -91,10 +92,16 @@ class Dataset:
         plt.legend(loc="upper right")
         plt.savefig(self.plot_file, quality=90)
 
+    def save_model(self, epoch):
+        checkpoint = {'epoch': epoch, 'lr_list': self.lr_list, 'loss_list': self.loss_list,
+                      'model': self.model.state_dict()}
+        if self.save_model_file:
+            torch.save(checkpoint, self.save_model_file)
+
 
 class AirQualityDataset(Dataset):
-    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file):
-        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file)
+    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, save_model_file):
+        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, save_model_file)
 
     def read_dataset(self, source_dataset):
         return pd.read_csv(source_dataset)
@@ -170,13 +177,18 @@ class AirQualityDataset(Dataset):
                 lr = self.optimizer.step_and_update_lr()
 
                 avg_loss = (j*avg_loss + loss) / (j+1)
+
             self.loss_list.append(avg_loss*(self.target_max - self.target_min))
             self.lr_list.append(10000 * lr)
+
+            self.save_model(i)
+
             print(avg_loss*(self.target_max - self.target_min))
 
 
 dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, epochs=2,
-                            window_size=30, device=torch.device("cpu"), plot_file='AirQuality_plot.jpg')
+                            window_size=30, device=torch.device("cpu"), plot_file='./AirQualityData/AirQuality_plot.jpg',
+                            save_model_file='./AirQualityData/model.chkpt')
 
 # device = xm.xla_device()  #here tpu
 # dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
