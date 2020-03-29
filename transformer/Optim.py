@@ -16,10 +16,11 @@ class ScheduledOptim():
 
     def step_and_update_lr(self):
         "Step with the inner optimizer"
-        self._update_learning_rate()
+        lr = self._update_learning_rate()
         self._optimizer.step()
         # xm.optimizer_step(self._optimizer)
         # xm.mark_step()
+        return lr
 
 
     def zero_grad(self):
@@ -41,4 +42,5 @@ class ScheduledOptim():
 
         for param_group in self._optimizer.param_groups:
             param_group['lr'] = lr
+        return lr
 

@@ -20,6 +20,8 @@ from sklearn import preprocessing
 import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 
 # import torch_xla
 # import torch_xla.core.xla_model as xm
@@ -33,13 +35,13 @@ def normalize_df(df):
 
 
 class Dataset:
-    def __init__(self, source_dataset, batch_size, epochs, window_size, device):
+    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file):
         self.data_frame = self.read_dataset(source_dataset)
-        # self.data_frame = self.data_frame.iloc[0:80, :]
         self.batch_size = batch_size
         self.epochs = epochs
         self.device = device
         self.window = window_size
+        self.plot_file = plot_file
         self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int)
         self.target_max = 0
         self.target_min = 0
@@ -50,11 +52,14 @@ class Dataset:
             d_word_vec=self.columns, d_model=self.columns, d_inner=64,
             n_layers=2, n_head=2, d_k=8, d_v=8,
             dropout=0.1)
-        self.criterion = torch.nn.MSELoss()
+        self.criterion = torch.nn.L1Loss()
         self.optimizer = ScheduledOptim(
             optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
             2.0, self.columns, 4000)
+        self.loss_list = []
+        self.lr_list = []
         self.train()
+        self.draw_plots()
 
     def read_dataset(self, source_dataset):
         pass
@@ -80,10 +85,16 @@ class Dataset:
             temp_tensor[i*self.window:(i+1)*self.window, :] = predict_tensor[i, :, :]
         return temp_tensor
 
+    def draw_plots(self):
+        plt.plot(self.loss_list, 'r', label="Loss")
+        plt.plot(self.lr_list, 'b', label="100 * Learning Rate")
+        plt.show()
+        plt.savefig(self.plot_file)
+
 
 class AirQualityDataset(Dataset):
-    def __init__(self, source_dataset, batch_size, epochs, window_size, device):
-        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device)
+    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file):
+        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file)
 
     def read_dataset(self, source_dataset):
         return pd.read_csv(source_dataset)
@@ -135,6 +146,7 @@ class AirQualityDataset(Dataset):
             imputing_df.loc[[j in chosen_idx for j in range(train_rows)], 0] = 0
             imputing_tensor = torch.tensor(imputing_df.values, dtype=torch.float, device=self.device)
             avg_loss = 0
+            lr = 0
 
             for j in range(math.floor(train_rows/section_size)):
                 batch_imputing_tensor = imputing_tensor[j * section_size: (j+1) * section_size, :]
@@ -152,15 +164,19 @@ class AirQualityDataset(Dataset):
                 imputed_label_tensor = imputed_tensor[imputing_idx_tensor, 0]
                 true_label_tensor = batch_train_tensor[imputing_idx_tensor, 0]
 
-                loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
+                # loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
+                loss = self.criterion(imputed_label_tensor, true_label_tensor)
                 loss.backward()     #here compute engine
-                self.optimizer.step_and_update_lr()
+                lr = self.optimizer.step_and_update_lr()
 
                 avg_loss = (j*avg_loss + loss) / (j+1)
+            self.loss_list.append(avg_loss*(self.target_max - self.target_min))
+            self.lr_list.append(10000 * lr)
             print(avg_loss*(self.target_max - self.target_min))
 
 
-dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, torch.device("cpu"))
+dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, epochs=2,
+                            window_size=30, device=torch.device("cpu"), plot_file='output_plot.png')
 
 # device = xm.xla_device()  #here tpu
 # dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
