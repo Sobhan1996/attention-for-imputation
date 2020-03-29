@@ -36,23 +36,24 @@ def normalize_df(df):
 
 class Dataset:
     def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
-                 test_data, valid_data, save_model_file=None, load_data=False):
+                 test_data, valid_data, target_column, target_min, target_max, model_file=None, load_data=False, load_model=False):
         self.data_frame = self.read_dataset(source_dataset)
         self.batch_size = batch_size
         self.epochs = epochs
         self.device = device
+        self.target_column = target_column
         self.window = window_size
         self.plot_file = plot_file
         self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int)
-        self.target_max = 0
-        self.target_min = 0
-        self.save_model_file = save_model_file
+        self.target_max = target_max
+        self.target_min = target_min
+        self.model_file = model_file
         if load_data:
             self.train_df = pd.read_csv(train_data)
             self.test_df = pd.read_csv(test_data)
             self.valid_df = pd.read_csv(valid_data)
         else:
-            self.train_df, self.valid_df, self.test_df = self.organize_dataset()
+            self.train_df, self.valid_df, self.test_df = self.organize_dataset(train_data, test_data, valid_data)
         self.columns = self.train_df.shape[1]
         self.model = Encoder(
             n_position=200,
@@ -65,87 +66,17 @@ class Dataset:
             2.0, self.columns, 4000)
         self.loss_list = []
         self.lr_list = []
-        self.train()
-        self.draw_plots()
+        if load_model:
+            self.model = torch.load(self.model_file)['model']
+            self.model.eval()
 
     def read_dataset(self, source_dataset):
         return pd.read_csv(source_dataset)
 
-    def organize_dataset(self):
+    def organize_dataset(self, train_data, test_data, valid_data):
         train_df = self.data_frame
         valid_df = self.data_frame
         test_df = self.data_frame
-        return train_df, valid_df, test_df
-
-    def train(self):
-        pass
-
-    def unsqueeze(self, batch_tensor):
-        temp_tensor = torch.zeros((self.batch_size, self.window, self.columns), dtype=torch.float, device=self.device)
-        for i in range(self.batch_size):
-            temp_tensor[i, :, :] = batch_tensor[i*self.window:(i+1)*self.window, :]
-        return temp_tensor
-
-    def squeeze(self, predict_tensor):
-        temp_tensor = torch.zeros((self.batch_size * self.window, self.columns), dtype=torch.float, device=self.device)
-        for i in range(self.batch_size):
-            temp_tensor[i*self.window:(i+1)*self.window, :] = predict_tensor[i, :, :]
-        return temp_tensor
-
-    def draw_plots(self):
-        plt.plot(self.loss_list, 'r', label="Loss")
-        plt.plot(self.lr_list, 'b', label="10000 * Learning Rate")
-        plt.legend(loc="upper right")
-        plt.savefig(self.plot_file, quality=90)
-
-    def save_model(self, epoch):
-        checkpoint = {'epoch': epoch, 'lr_list': self.lr_list, 'loss_list': self.loss_list,
-                      'model': self.model.state_dict()}
-        if self.save_model_file:
-            torch.save(checkpoint, self.save_model_file)
-
-
-class AirQualityDataset(Dataset):
-    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data, test_data,
-                 valid_data, save_model_file, load_data):
-        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
-                         test_data, valid_data, save_model_file, load_data)
-
-    def organize_dataset(self):
-        self.data_frame['sin_hour'] = np.sin(2*np.pi*self.data_frame.hour/24)
-        self.data_frame['cos_hour'] = np.cos(2*np.pi*self.data_frame.hour/24)
-        self.data_frame.drop('hour', axis=1, inplace=True)
-
-        self.data_frame['sin_month'] = np.sin(2*np.pi*self.data_frame.month/24)
-        self.data_frame['cos_month'] = np.cos(2*np.pi*self.data_frame.month/24)
-
-        self.data_frame.drop('No', axis=1, inplace=True)
-        self.data_frame.drop('day', axis=1, inplace=True)
-
-        self.data_frame['year'] = self.data_frame['year'].astype('category', copy=False)
-
-        self.data_frame = pd.get_dummies(self.data_frame)
-
-        test_df = self.data_frame.loc[np.isnan(self.data_frame['pm2.5'])]
-
-        clean_df = self.data_frame.loc[~np.isnan(self.data_frame['pm2.5'])]
-
-        self.target_max = clean_df['pm2.5'].max()
-        self.target_min = clean_df['pm2.5'].min()
-
-        clean_df['pm2.5'] = (clean_df['pm2.5'] - self.target_min) / (self.target_max - self.target_min)
-
-        valid_df = clean_df.loc[clean_df['month'].isin([4, 8, 12])]
-        train_df = clean_df.loc[~clean_df['month'].isin([4, 8, 12])]
-
-        test_df = test_df.drop('month', axis=1)
-        train_df = train_df.drop('month', axis=1)
-        valid_df = valid_df.drop('month', axis=1)
-
-        test_df = normalize_df(test_df)
-        train_df = normalize_df(train_df)
-        valid_df = normalize_df(valid_df)
-
         return train_df, valid_df, test_df
 
     def train(self):
@@ -155,7 +86,7 @@ class AirQualityDataset(Dataset):
         for i in range(self.epochs):
             chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
             imputing_df = self.train_df.copy()
-            imputing_df.loc[[j in chosen_idx for j in range(train_rows)], 0] = 0
+            imputing_df.iloc[[j in chosen_idx for j in range(train_rows)], self.target_column] = 0
             imputing_tensor = torch.tensor(imputing_df.values, dtype=torch.float, device=self.device)
             avg_loss = 0
             lr = 0
@@ -190,12 +121,87 @@ class AirQualityDataset(Dataset):
 
             print(avg_loss*(self.target_max - self.target_min))
 
+        self.draw_plots()
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=30,
+    def unsqueeze(self, batch_tensor):
+        temp_tensor = torch.zeros((self.batch_size, self.window, self.columns), dtype=torch.float, device=self.device)
+        for i in range(self.batch_size):
+            temp_tensor[i, :, :] = batch_tensor[i*self.window:(i+1)*self.window, :]
+        return temp_tensor
+
+    def squeeze(self, predict_tensor):
+        temp_tensor = torch.zeros((self.batch_size * self.window, self.columns), dtype=torch.float, device=self.device)
+        for i in range(self.batch_size):
+            temp_tensor[i*self.window:(i+1)*self.window, :] = predict_tensor[i, :, :]
+        return temp_tensor
+
+    def draw_plots(self):
+        plt.plot(self.loss_list, 'r', label="Loss")
+        plt.plot(self.lr_list, 'b', label="10000 * Learning Rate")
+        plt.legend(loc="upper right")
+        plt.savefig(self.plot_file, quality=90)
+
+    def save_model(self, epoch):
+        checkpoint = {'epoch': epoch, 'lr_list': self.lr_list, 'loss_list': self.loss_list,
+                      'model': self.model}
+        if self.model_file:
+            torch.save(checkpoint, self.model_file)
+
+
+class AirQualityDataset(Dataset):
+    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data, test_data,
+                 valid_data, target_column, target_min, target_max, model_file, load_data, load_model):
+        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
+                         test_data, valid_data, target_column, target_min, target_max, model_file, load_data, load_model)
+
+    def organize_dataset(self, train_data, test_data, valid_data):
+        self.data_frame['sin_hour'] = np.sin(2*np.pi*self.data_frame.hour/24)
+        self.data_frame['cos_hour'] = np.cos(2*np.pi*self.data_frame.hour/24)
+        self.data_frame.drop('hour', axis=1, inplace=True)
+
+        self.data_frame['sin_month'] = np.sin(2*np.pi*self.data_frame.month/24)
+        self.data_frame['cos_month'] = np.cos(2*np.pi*self.data_frame.month/24)
+
+        self.data_frame.drop('No', axis=1, inplace=True)
+        self.data_frame.drop('day', axis=1, inplace=True)
+
+        self.data_frame['year'] = self.data_frame['year'].astype('category', copy=False)
+
+        self.data_frame = pd.get_dummies(self.data_frame)
+
+        test_df = self.data_frame.loc[np.isnan(self.data_frame['pm2.5'])]
+
+        clean_df = self.data_frame.loc[~np.isnan(self.data_frame['pm2.5'])]
+
+        self.target_max = clean_df['pm2.5'].max()
+        self.target_min = clean_df['pm2.5'].min()
+
+        clean_df['pm2.5'] = (clean_df['pm2.5'] - self.target_min) / (self.target_max - self.target_min)
+
+        valid_df = clean_df.loc[clean_df['month'].isin([4, 8, 12])]
+        train_df = clean_df.loc[~clean_df['month'].isin([4, 8, 12])]
+
+        test_df = test_df.drop('month', axis=1)
+        train_df = train_df.drop('month', axis=1)
+        valid_df = valid_df.drop('month', axis=1)
+
+        train_df = normalize_df(train_df)
+        test_df = normalize_df(test_df)
+        valid_df = normalize_df(valid_df)
+
+        train_df.to_csv(train_data, index=False)
+        test_df.to_csv(test_data, index=False)
+        valid_df.to_csv(valid_data, index=False)
+
+        return train_df, valid_df, test_df
+
+
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=5,
                             window_size=30, device=torch.device("cpu"), plot_file='./AirQualityData/AirQuality_plot.jpg',
-                            save_model_file='./AirQualityData/model.chkpt', train_data='./AirQualityData/train.csv',
-                            test_data='./AirQualityData/test.csv', valid_data='./AirQualityData/valid.csv',
-                            load_data=False)
+                            model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
+                            test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
+                            load_data=True, load_model=False, target_column=0, target_min=0, target_max=994)
+dataset.train()
 
 # device = xm.xla_device()  #here tpu
 # dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
