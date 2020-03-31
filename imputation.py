@@ -84,8 +84,9 @@ class Dataset:
         train_tensor = torch.tensor(self.train_df.values, dtype=torch.float, device=self.device)
         train_rows = self.train_df.shape[0]
         section_size = self.window * self.batch_size
+        chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
         for i in range(self.epochs):
-            chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
+            # chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
             imputing_df = self.train_df.copy()
             imputing_df.iloc[[j in chosen_idx for j in range(train_rows)], self.target_column] = 0
             imputing_tensor = torch.tensor(imputing_df.values, dtype=torch.float, device=self.device)
@@ -249,7 +250,7 @@ dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.1
                             window_size=30, device=torch.device("cuda:0"), plot_file='./AirQualityData/AirQuality_plot.jpg',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
-                            load_data=False, load_model=True, target_column=0, target_min=0, target_max=994, d_inner=64,
+                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=64,
                             n_layers=4, n_head_=4, d_k=16, d_v=16, criterion=torch.nn.L1Loss(), n_warmup_steps=1000,
                             target_name='pm2.5')
 dataset.train()
