@@ -45,7 +45,7 @@ class Dataset:
         self.window = window_size
         self.plot_file = plot_file
         self.target_name = target_name
-        self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int)
+        self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int, device=device)
         self.target_max = target_max
         self.target_min = target_min
         self.model_file = model_file
