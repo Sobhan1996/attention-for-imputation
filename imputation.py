@@ -37,7 +37,7 @@ def normalize_df(df):
 class Dataset:
     def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
                  test_data, valid_data, target_column, target_min, target_max, d_inner, n_layers, n_head_, d_k, d_v,
-                 n_warmup_steps, criterion, model_file=None, load_data=False, load_model=False):
+                 n_warmup_steps, criterion, target_name, model_file=None, load_data=False, load_model=False):
         self.data_frame = self.read_dataset(source_dataset)
         self.batch_size = batch_size
         self.epochs = epochs
@@ -45,6 +45,7 @@ class Dataset:
         self.target_column = target_column
         self.window = window_size
         self.plot_file = plot_file
+        self.target_name = target_name
         self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int)
         self.target_max = target_max
         self.target_min = target_min
@@ -198,10 +199,10 @@ class Dataset:
 class AirQualityDataset(Dataset):
     def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data, test_data,
                  valid_data, target_column, target_min, target_max, d_inner, n_layers, n_head_, d_k, d_v,
-                 n_warmup_steps, criterion, model_file, load_data, load_model):
+                 n_warmup_steps, criterion, target_name, model_file, load_data, load_model):
         Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
                          test_data, valid_data, target_column, target_min, target_max, d_inner, n_layers, n_head_, d_k,
-                         d_v, n_warmup_steps, criterion, model_file, load_data, load_model)
+                         d_v, n_warmup_steps, criterion, target_name, model_file, load_data, load_model)
 
     def organize_dataset(self, train_data, test_data, valid_data):
         self.data_frame['sin_hour'] = np.sin(2*np.pi*self.data_frame.hour/24)
@@ -222,10 +223,10 @@ class AirQualityDataset(Dataset):
 
         clean_df = self.data_frame.loc[~np.isnan(self.data_frame['pm2.5'])]
 
-        self.target_max = clean_df['pm2.5'].max()
-        self.target_min = clean_df['pm2.5'].min()
+        self.target_max = clean_df[self.target_name].max()
+        self.target_min = clean_df[self.target_name].min()
 
-        clean_df['pm2.5'] = (clean_df['pm2.5'] - self.target_min) / (self.target_max - self.target_min)
+        clean_df[self.target_name] = (clean_df[self.target_name] - self.target_min) / (self.target_max - self.target_min)
 
         valid_df = clean_df.loc[clean_df['month'].isin([4, 8, 12])]
         train_df = clean_df.loc[~clean_df['month'].isin([4, 8, 12])]
@@ -245,14 +246,15 @@ class AirQualityDataset(Dataset):
         return train_df, valid_df, test_df
 
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=100,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=200,
                             window_size=30, device=torch.device("cpu"), plot_file='./AirQualityData/AirQuality_plot.jpg',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
-                            load_data=True, load_model=True, target_column=0, target_min=0, target_max=994, d_inner=64,
-                            n_layers=2, n_head_=2, d_k=8, d_v=8, criterion=torch.nn.L1Loss(), n_warmup_steps=2000)
-# dataset.train()
-dataset.validate()
+                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=64,
+                            n_layers=2, n_head_=2, d_k=8, d_v=8, criterion=torch.nn.L1Loss(), n_warmup_steps=2000,
+                            target_name='pm2.5')
+dataset.train()
+# dataset.validate()
 
 # device = xm.xla_device()  #here tpu
 # dataset = AirQualityDataset('./datasets/PRSA_data_2010.1.1-2014.12.31.csv', 25, 10000, 30, device)
