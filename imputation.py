@@ -247,7 +247,7 @@ class AirQualityDataset(Dataset):
 
 
 dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=200,
-                            window_size=30, device=torch.device("cpu"), plot_file='./AirQualityData/AirQuality_plot.jpg',
+                            window_size=30, device=torch.device("cuda:0"), plot_file='./AirQualityData/AirQuality_plot.jpg',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
                             load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=64,
