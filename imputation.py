@@ -246,7 +246,7 @@ class AirQualityDataset(Dataset):
         return train_df, valid_df, test_df
 
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=400,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=2000,
                             window_size=30, device=torch.device("cuda:0"), plot_file='./AirQualityData/AirQuality_plot.jpg',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
