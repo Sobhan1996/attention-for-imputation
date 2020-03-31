@@ -35,7 +35,7 @@ class ScheduledOptim():
 
         self.n_steps += 1
         lr = self.init_lr * self._get_lr_scale()
-        lr = 1e-06
+        lr = 1e-05
         for param_group in self._optimizer.param_groups:
             param_group['lr'] = lr
         return lr
