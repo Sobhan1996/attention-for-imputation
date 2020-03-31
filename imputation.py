@@ -60,7 +60,7 @@ class Dataset:
             n_position=200,
             d_word_vec=self.columns, d_model=self.columns, d_inner=d_inner,
             n_layers=n_layers, n_head=n_head_, d_k=d_k, d_v=d_v,
-            dropout=0.1)
+            dropout=0.1).to(device)
         self.criterion = criterion
         self.optimizer = ScheduledOptim(
             optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
