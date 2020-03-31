@@ -16,7 +16,7 @@ class MultiHeadAttention(nn.Module):
         self.d_k = d_k
         self.d_v = d_v
 
-        self.w_qs = nn.Linear(d_model, n_head * d_k, bias=False).cuda()
+        self.w_qs = nn.Linear(d_model, n_head * d_k, bias=False)
         self.w_ks = nn.Linear(d_model, n_head * d_k, bias=False)
         self.w_vs = nn.Linear(d_model, n_head * d_v, bias=False)
         self.fc = nn.Linear(n_head * d_v, d_model, bias=False)
