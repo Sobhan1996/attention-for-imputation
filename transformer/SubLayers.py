@@ -34,6 +34,7 @@ class MultiHeadAttention(nn.Module):
 
         residual = q
         q = self.layer_norm(q)
+        print(q.device)
 
         # Pass through the pre-attention projection: b x lq x (n*dv)
         # Separate different heads: b x lq x n x dv
