@@ -68,6 +68,7 @@ class Dataset:
         if load_model:
             self.model = torch.load(self.model_file)['model']
             self.model.eval()
+            self.model = self.model.to(device)
 
     def read_dataset(self, source_dataset):
         return pd.read_csv(source_dataset)
@@ -108,8 +109,8 @@ class Dataset:
                 imputed_label_tensor = imputed_tensor[imputing_idx_tensor, self.target_column]
                 true_label_tensor = batch_train_tensor[imputing_idx_tensor, self.target_column]
 
-                # loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
-                loss = self.criterion(imputed_label_tensor, true_label_tensor)
+                loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
+                # loss = self.criterion(imputed_label_tensor, true_label_tensor)
                 loss.backward()     #here compute engine
                 lr = self.optimizer.step_and_update_lr()
 
@@ -249,7 +250,7 @@ class AirQualityDataset(Dataset):
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=200,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=400,
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
