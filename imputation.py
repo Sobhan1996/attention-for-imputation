@@ -250,7 +250,7 @@ class AirQualityDataset(Dataset):
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=400,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=40,
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
@@ -259,6 +259,7 @@ dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.1
                             target_name='pm2.5')
 dataset.train()
 
+print('---------------')
 dataset.load_model = True
 dataset.criterion = torch.nn.L1Loss()
 dataset.validate()
