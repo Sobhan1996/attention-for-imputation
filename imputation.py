@@ -253,8 +253,8 @@ dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.1
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
-                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=64,
-                            n_layers=1, n_head_=1, d_k=16, d_v=16, criterion=torch.nn.L1Loss(), n_warmup_steps=2000,
+                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=32,
+                            n_layers=1, n_head_=1, d_k=8, d_v=8, criterion=torch.nn.L1Loss(), n_warmup_steps=2000,
                             target_name='pm2.5')
 dataset.train()
 # dataset.validate()
