@@ -1,16 +1,8 @@
-import argparse
 import math
 import time
-from tqdm import tqdm
 
 import torch
-import torch.nn.functional as F
 import torch.optim as optim
-# from torchtext.data import Field, Dataset, BucketIterator
-# from torchtext.datasets import TranslationDataset
-#
-# import transformer.Constants as Constants
-# from transformer.Models import Transformer
 from transformer.Models import Encoder
 from transformer.Optim import ScheduledOptim
 
@@ -44,6 +36,12 @@ class Dataset:
         self.target_column = target_column
         self.window = window_size
         self.plot_file = plot_file
+        self.n_layers = n_layers
+        self.n_head = n_head_
+        self.d_inner = d_inner
+        self.warmup_step = n_warmup_steps
+        self.d_k = d_k
+        self.d_v = d_v
         self.target_name = target_name
         self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int, device=device)
         self.target_max = target_max
@@ -84,9 +82,8 @@ class Dataset:
         train_tensor = torch.tensor(self.train_df.values, dtype=torch.float, device=self.device)
         train_rows = self.train_df.shape[0]
         section_size = self.window * self.batch_size
-        chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
         for i in range(self.epochs):
-            # chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
+            chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
             imputing_df = self.train_df.copy()
             imputing_df.iloc[[j in chosen_idx for j in range(train_rows)], self.target_column] = 0
             imputing_tensor = torch.tensor(imputing_df.values, dtype=torch.float, device=self.device)
@@ -186,8 +183,10 @@ class Dataset:
     def draw_plots(self):
         plt.plot(self.loss_list, 'r', label="Loss")
         plt.plot(self.lr_list, 'b', label="10000 * Learning Rate")
-        plt.legend(loc="upper right")
-        plt.savefig(self.plot_file, quality=90)
+        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + 'target_column: ' + self.target_name
+        plt.legend(loc="upper right", title=title)
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        plt.savefig(self.plot_file + timestr, quality=90)
 
     def save_model(self, epoch):
         checkpoint = {'epoch': epoch, 'lr_list': self.lr_list, 'loss_list': self.loss_list,
@@ -246,12 +245,14 @@ class AirQualityDataset(Dataset):
         return train_df, valid_df, test_df
 
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=2000,
-                            window_size=30, device=torch.device("cuda:0"), plot_file='./AirQualityData/AirQuality_plot.jpg',
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=200,
+                            window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
                             load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=64,
-                            n_layers=4, n_head_=4, d_k=16, d_v=16, criterion=torch.nn.L1Loss(), n_warmup_steps=1000,
+                            n_layers=2, n_head_=1, d_k=16, d_v=16, criterion=torch.nn.L1Loss(), n_warmup_steps=2000,
                             target_name='pm2.5')
 dataset.train()
 # dataset.validate()
