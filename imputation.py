@@ -82,11 +82,13 @@ class Dataset:
         train_tensor = torch.tensor(self.train_df.values, dtype=torch.float, device=self.device)
         train_rows = self.train_df.shape[0]
         section_size = self.window * self.batch_size
+        avg_loss = 0
         for i in range(self.epochs):
             chosen_idx = np.random.choice(train_rows, replace=True, size=math.floor(train_rows/10))
             imputing_df = self.train_df.copy()
             imputing_df.iloc[[j in chosen_idx for j in range(train_rows)], self.target_column] = 0
             imputing_tensor = torch.tensor(imputing_df.values, dtype=torch.float, device=self.device)
+
             avg_loss = 0
             lr = 0
 
@@ -120,7 +122,7 @@ class Dataset:
 
             print(avg_loss*(self.target_max - self.target_min))
 
-        self.draw_plots()
+        self.draw_plots(avg_loss*(self.target_max - self.target_min))
 
     def validate(self):
         valid_tensor = torch.tensor(self.valid_df.values, dtype=torch.float, device=self.device)
@@ -180,10 +182,10 @@ class Dataset:
             temp_tensor[i*self.window:(i+1)*self.window, :] = predict_tensor[i, :, :]
         return temp_tensor
 
-    def draw_plots(self):
+    def draw_plots(self, avg_loss):
         plt.plot(self.loss_list, 'r', label="Loss")
         plt.plot(self.lr_list, 'b', label="10000 * Learning Rate")
-        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + '\n' + 'target_column: ' + self.target_name
+        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + '\n' + 'target_column: ' + self.target_name + '\n' + 'avg_loss: ' + avg_loss
         plt.legend(loc="upper right", title=title)
         timestr = time.strftime("%Y%m%d-%H%M%S")
         plt.savefig(self.plot_file + timestr, quality=90)
