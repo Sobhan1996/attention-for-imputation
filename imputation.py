@@ -108,8 +108,8 @@ class Dataset:
                 imputed_label_tensor = imputed_tensor[imputing_idx_tensor, self.target_column]
                 true_label_tensor = batch_train_tensor[imputing_idx_tensor, self.target_column]
 
-                loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
-                # loss = self.criterion(imputed_label_tensor, true_label_tensor)
+                # loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
+                loss = self.criterion(imputed_label_tensor, true_label_tensor)
                 loss.backward()     #here compute engine
                 lr = self.optimizer.step_and_update_lr()
 
