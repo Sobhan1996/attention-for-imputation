@@ -185,7 +185,7 @@ class Dataset:
     def draw_plots(self, avg_loss):
         plt.plot(self.loss_list, 'r', label="Loss")
         plt.plot(self.lr_list, 'b', label="10000 * Learning Rate")
-        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + '\n' + 'target_column: ' + self.target_name + '\n' + 'avg_loss: ' + avg_loss
+        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + '\n' + 'target_column: ' + self.target_name + '\n' + 'avg_loss: ' + str(float(avg_loss.data))
         plt.legend(loc="upper right", title=title)
         timestr = time.strftime("%Y%m%d-%H%M%S")
         plt.savefig(self.plot_file + timestr, quality=90)
@@ -249,7 +249,7 @@ class AirQualityDataset(Dataset):
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=400,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=300,
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
