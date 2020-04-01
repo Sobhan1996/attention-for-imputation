@@ -185,7 +185,7 @@ class Dataset:
     def draw_plots(self, avg_loss):
         plt.plot(self.loss_list, 'r', label="Loss")
         plt.plot(self.lr_list, 'b', label="10000 * Learning Rate")
-        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + '\n' + 'd_k: ' + str(self.d_k) + '\n' + 'window: ' + str(self.window) + '\n' + 'target_column: ' + self.target_name + '\n' + 'avg_loss: ' + str(float(avg_loss.data))
+        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + '\n' + 'd_k: ' + str(self.d_k) + '\n' + 'window: ' + str(self.window) + '\n' + 'target_column: ' + self.target_name + '\n' + 'Loss_function: ' + str(self.criterion) + '\n' + 'avg_loss: ' + str(float(avg_loss.data))
         plt.legend(loc="upper right", title=title)
         timestr = time.strftime("%Y%m%d-%H%M%S")
         plt.savefig(self.plot_file + timestr, quality=90)
