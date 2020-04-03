@@ -109,8 +109,6 @@ class Dataset:
 
                 input_tensor = self.unsqueeze(batch_imputing_tensor)
 
-                self.optimizer.zero_grad()
-
                 imputed_tensor = self.squeeze(self.model(input_tensor, self.input_mask)[0])
 
                 imputing_idx = [k in chosen_idx for k in range(j * section_size, (j+1) * section_size)]
@@ -121,6 +119,7 @@ class Dataset:
 
                 loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
                 # loss = self.criterion(imputed_label_tensor, true_label_tensor)
+                self.optimizer.zero_grad()
                 if imputed_label_tensor.shape[0] > 0:
 
                     loss.backward()     #here compute engine
@@ -155,8 +154,6 @@ class Dataset:
             batch_valid_tensor = valid_tensor[j * section_size: (j+1) * section_size, :]
 
             input_tensor = self.unsqueeze(batch_imputing_tensor)
-
-            self.optimizer.zero_grad()
 
             imputed_tensor = self.squeeze(self.model(input_tensor, self.input_mask)[0])
 
@@ -263,7 +260,7 @@ class AirQualityDataset(Dataset):
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=1, epochs=5,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=200,
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
