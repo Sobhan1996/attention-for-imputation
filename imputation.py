@@ -28,7 +28,7 @@ def normalize_df(df):
 class Dataset:
     def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
                  test_data, valid_data, target_column, target_min, target_max, d_inner, n_layers, n_head_, d_k, d_v,
-                 n_warmup_steps, criterion, target_name, model_file=None, load_data=False, load_model=False):
+                 n_warmup_steps, criterion, target_name, d_model, model_file=None, load_data=False, load_model=False):
         self.data_frame = self.read_dataset(source_dataset)
         self.batch_size = batch_size
         self.epochs = epochs
@@ -42,6 +42,7 @@ class Dataset:
         self.warmup_step = n_warmup_steps
         self.d_k = d_k
         self.d_v = d_v
+        self.d_model = d_model
         self.target_name = target_name
         self.input_mask = torch.ones([self.batch_size, 1, self.window], dtype=torch.int, device=device)
         self.target_max = target_max
@@ -53,6 +54,12 @@ class Dataset:
             self.valid_df = pd.read_csv(valid_data)
         else:
             self.train_df, self.valid_df, self.test_df = self.organize_dataset(train_data, test_data, valid_data)
+
+        pad_col = ['col' + str(i) for i in range(self.train_df.shape[1], self.d_model)]
+        for col in pad_col:
+            self.train_df[col] = 0
+            self.test_df[col] = 0
+            self.valid_df[col] = 0
         self.columns = self.train_df.shape[1]
         self.model = Encoder(
             n_position=200,
@@ -203,10 +210,10 @@ class Dataset:
 class AirQualityDataset(Dataset):
     def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data, test_data,
                  valid_data, target_column, target_min, target_max, d_inner, n_layers, n_head_, d_k, d_v,
-                 n_warmup_steps, criterion, target_name, model_file, load_data, load_model):
+                 n_warmup_steps, criterion, target_name, d_model, model_file, load_data, load_model):
         Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
                          test_data, valid_data, target_column, target_min, target_max, d_inner, n_layers, n_head_, d_k,
-                         d_v, n_warmup_steps, criterion, target_name, model_file, load_data, load_model)
+                         d_v, n_warmup_steps, criterion, target_name, d_model, model_file, load_data, load_model)
 
     def organize_dataset(self, train_data, test_data, valid_data):
         self.data_frame['sin_hour'] = np.sin(2*np.pi*self.data_frame.hour/24)
@@ -258,7 +265,7 @@ dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.1
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
                             load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=64,
                             n_layers=1, n_head_=1, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=5000,
-                            target_name='pm2.5')
+                            target_name='pm2.5', d_model=32)
 dataset.train()
 
 print('---------------')
