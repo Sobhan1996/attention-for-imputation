@@ -58,7 +58,7 @@ class Dataset:
             n_position=200,
             d_word_vec=self.columns, d_model=self.columns, d_inner=d_inner,
             n_layers=n_layers, n_head=n_head_, d_k=d_k, d_v=d_v,
-            dropout=0.1).to(device)
+            dropout=0).to(device)
         self.criterion = criterion
         self.optimizer = ScheduledOptim(
             optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
@@ -111,10 +111,12 @@ class Dataset:
 
                 loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
                 # loss = self.criterion(imputed_label_tensor, true_label_tensor)
-                loss.backward()     #here compute engine
-                lr = self.optimizer.step_and_update_lr()
+                if imputed_label_tensor.shape[0] > 0:
 
-                avg_loss = (j*avg_loss + loss) / (j+1)
+                    loss.backward()     #here compute engine
+                    lr = self.optimizer.step_and_update_lr()
+
+                    avg_loss = (j*avg_loss + loss) / (j+1)
 
             self.loss_list.append(avg_loss*(self.target_max - self.target_min))
             self.lr_list.append(10000 * lr)
@@ -250,11 +252,11 @@ class AirQualityDataset(Dataset):
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=40,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=1, epochs=4000,
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
-                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=32,
+                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=128,
                             n_layers=1, n_head_=1, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=2000,
                             target_name='pm2.5')
 dataset.train()
