@@ -66,16 +66,19 @@ class Dataset:
             d_word_vec=self.columns, d_model=self.columns, d_inner=d_inner,
             n_layers=n_layers, n_head=n_head_, d_k=d_k, d_v=d_v,
             dropout=0).to(device)
-        self.criterion = criterion
-        self.optimizer = ScheduledOptim(
-            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
-            2.0, self.columns, n_warmup_steps)
-        self.loss_list = []
-        self.lr_list = []
+
         if load_model:
             self.model = torch.load(self.model_file)['model']
             self.model.eval()
             self.model = self.model.to(device)
+            self.prev_epoch = torch.load(self.model_file)['epoch']
+
+        self.criterion = criterion
+        self.optimizer = ScheduledOptim(
+            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
+            2.0, self.columns, n_warmup_steps, n_step=self.prev_epoch*(math.floor(self.train_df.shape[0]/self.window * self.batch_size)))
+        self.loss_list = []
+        self.lr_list = []
 
     def read_dataset(self, source_dataset):
         return pd.read_csv(source_dataset)
@@ -168,7 +171,8 @@ class Dataset:
             # loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
             loss = self.criterion(imputed_label_tensor, true_label_tensor)
 
-            avg_loss = (j*avg_loss + loss) / (j+1)
+            if imputed_label_tensor.shape[0] > 0:
+                avg_loss = (j*avg_loss + loss) / (j+1)
 
         print(avg_loss*(self.target_max - self.target_min))
 
@@ -259,11 +263,11 @@ class AirQualityDataset(Dataset):
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=1, epochs=4000,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=1, epochs=5,
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
-                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=128,
+                            load_data=False, load_model=True, target_column=0, target_min=0, target_max=994, d_inner=128,
                             n_layers=1, n_head_=1, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=5000,
                             target_name='pm2.5', d_model=32)
 dataset.train()
