@@ -306,7 +306,7 @@ dataset = HumanActivityDataset(source_dataset='./datasets/ConfLongDemo_JSI.txt',
                                model_file='./HumanActivityData/model.chkpt', train_data=r'./HumanActivityData/train.csv',
                                test_data=r'./HumanActivityData/test.csv', valid_data=r'./HumanActivityData/valid.csv',
                                load_data=False, load_model=False, target_column=0, target_min=-0.27869826555252075, target_max=5.75817346572876, d_inner=128,
-                               n_layers=1, n_head_=2, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=5000,
+                               n_layers=2, n_head_=2, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=5000,
                                target_name='x_coordinate', d_model=43)
 
 
