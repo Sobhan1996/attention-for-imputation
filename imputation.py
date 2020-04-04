@@ -310,7 +310,7 @@ dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.1
 #                                target_name='x_coordinate', d_model=43)
 
 
-# dataset.train()
+dataset.train()
 
 print('---------------')
 dataset.load_model = True
