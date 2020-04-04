@@ -48,6 +48,7 @@ class Dataset:
         self.target_max = target_max
         self.target_min = target_min
         self.model_file = model_file
+        self.prev_epoch = 0
         if load_data:
             self.train_df = pd.read_csv(train_data)
             self.test_df = pd.read_csv(test_data)
@@ -260,15 +261,55 @@ class AirQualityDataset(Dataset):
         return train_df, valid_df, test_df
 
 
+class HumanActivityDataset(Dataset):
+    def __init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data, test_data,
+                 valid_data, target_column, target_min, target_max, d_inner, n_layers, n_head_, d_k, d_v,
+                 n_warmup_steps, criterion, target_name, d_model, model_file, load_data, load_model):
+        Dataset.__init__(self, source_dataset, batch_size, epochs, window_size, device, plot_file, train_data,
+                         test_data, valid_data, target_column, target_min, target_max, d_inner, n_layers, n_head_, d_k,
+                         d_v, n_warmup_steps, criterion, target_name, d_model, model_file, load_data, load_model)
+
+    def organize_dataset(self, train_data, test_data, valid_data):
+        self.data_frame.drop('date', axis=1, inplace=True)
+        self.data_frame.drop('timestamp', axis=1, inplace=True)
+        self.data_frame = pd.get_dummies(self.data_frame)
+
+        self.target_max = self.data_frame[self.target_name].max()
+        self.target_min = self.data_frame[self.target_name].min()
+
+        self.data_frame[self.target_name] = (self.data_frame[self.target_name] - self.target_min) / (self.target_max - self.target_min)
+
+        valid_df = self.data_frame.loc[self.data_frame['Sequence_name_A01'].isin([1])]
+        train_df = self.data_frame.loc[self.data_frame['Sequence_name_A01'].isin([0])]
+
+        train_df = normalize_df(train_df)
+        valid_df = normalize_df(valid_df)
+
+        train_df.to_csv(train_data, index=False)
+        valid_df.to_csv(valid_data, index=False)
+
+        return train_df, valid_df, valid_df
+
+
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=1,
-                            window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
-                            model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
-                            test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
-                            load_data=False, load_model=True, target_column=0, target_min=0, target_max=994, d_inner=128,
-                            n_layers=1, n_head_=1, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=5000,
-                            target_name='pm2.5', d_model=32)
+# dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=1,
+#                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
+#                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
+#                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
+#                             load_data=False, load_model=True, target_column=0, target_min=0, target_max=994, d_inner=128,
+#                             n_layers=1, n_head_=1, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=5000,
+#                             target_name='pm2.5', d_model=32)
+
+dataset = HumanActivityDataset(source_dataset='./datasets/ConfLongDemo_JSI.txt', batch_size=25, epochs=10,
+                               window_size=30, device=device, plot_file='./HumanActivityData/AirQuality_plot',
+                               model_file='./HumanActivityData/model.chkpt', train_data=r'./HumanActivityData/train.csv',
+                               test_data=r'./HumanActivityData/test.csv', valid_data=r'./HumanActivityData/valid.csv',
+                               load_data=False, load_model=False, target_column=0, target_min=-0.27869826555252075, target_max=5.75817346572876, d_inner=128,
+                               n_layers=1, n_head_=1, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=5000,
+                               target_name='x_coordinate', d_model=43)
+
+
 dataset.train()
 
 print('---------------')
