@@ -293,13 +293,13 @@ class HumanActivityDataset(Dataset):
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=1000,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=2000,
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
-                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=128,
+                            load_data=False, load_model=False, target_column=0, target_min=0, target_max=994, d_inner=32,
                             n_layers=1, n_head_=1, d_k=32, d_v=32, criterion=torch.nn.MSELoss(), n_warmup_steps=5000,
-                            target_name='pm2.5', d_model=64)
+                            target_name='pm2.5', d_model=32)
 
 # dataset = HumanActivityDataset(source_dataset='./datasets/ConfLongDemo_JSI.txt', batch_size=25, epochs=100,
 #                                window_size=30, device=device, plot_file='./HumanActivityData/HumanActivity_plot',
