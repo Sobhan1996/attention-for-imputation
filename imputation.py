@@ -109,6 +109,8 @@ class Dataset:
 
                 input_tensor = self.unsqueeze(batch_imputing_tensor)
 
+                self.optimizer.zero_grad()
+
                 imputed_tensor = self.squeeze(self.model(input_tensor, self.input_mask)[0])
 
                 imputing_idx = [k in chosen_idx for k in range(j * section_size, (j+1) * section_size)]
@@ -119,7 +121,7 @@ class Dataset:
 
                 loss = torch.sqrt(self.criterion(imputed_label_tensor, true_label_tensor))
                 # loss = self.criterion(imputed_label_tensor, true_label_tensor)
-                self.optimizer.zero_grad()
+
                 if imputed_label_tensor.shape[0] > 0:
 
                     loss.backward()     #here compute engine
@@ -196,7 +198,7 @@ class Dataset:
     def draw_plots(self, avg_loss):
         plt.plot(self.loss_list, 'r', label="Loss")
         plt.plot(self.lr_list, 'b', label="10000 * Learning Rate")
-        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + '\n' + 'd_k: ' + str(self.d_k) + '\n' + 'window: ' + str(self.window) + '\n' + 'target_column: ' + self.target_name + '\n' + 'Loss_function: ' + str(self.criterion) + '\n' + 'avg_loss: ' + str(float(avg_loss.data))
+        title = 'n_layers: ' + str(self.n_layers) + '\n' + 'n_heads: ' + str(self.n_head) + '\n' + 'd_inner: ' + str(self.d_inner) + '\n' + 'warmup_step: ' + str(self.warmup_step) + '\n' + 'd_v: ' + str(self.d_v) + '\n' + 'd_k: ' + str(self.d_k) + '\n' + 'd_model: ' + str(self.d_model) + '\n' + 'window: ' + str(self.window) + '\n' + 'target_column: ' + self.target_name + '\n' + 'Loss_function: ' + str(self.criterion) + '\n' + 'avg_loss: ' + str(float(avg_loss.data))
         plt.legend(loc="upper right", title=title)
         timestr = time.strftime("%Y%m%d-%H%M%S")
         plt.savefig(self.plot_file + timestr, quality=90)
@@ -260,7 +262,7 @@ class AirQualityDataset(Dataset):
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=200,
+dataset = AirQualityDataset(source_dataset='./datasets/PRSA_data_2010.1.1-2014.12.31.csv', batch_size=25, epochs=1,
                             window_size=30, device=device, plot_file='./AirQualityData/AirQuality_plot',
                             model_file='./AirQualityData/model.chkpt', train_data=r'./AirQualityData/train.csv',
                             test_data=r'./AirQualityData/test.csv', valid_data=r'./AirQualityData/valid.csv',
